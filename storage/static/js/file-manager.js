@@ -355,6 +355,138 @@ class FileManager {
         });
     }
 
+    // 下载文件并显示网速
+    async downloadFileWithSpeed(url, filename) {
+        const startTime = Date.now();
+        let downloadedBytes = 0;
+        
+        try {
+            const response = await fetch(url);
+            const contentLength = response.headers.get('content-length');
+            const totalSize = parseInt(contentLength, 10) || 0;
+            
+            // 创建进度显示
+            this.showDownloadProgress(filename, totalSize);
+            
+            const reader = response.body.getReader();
+            const chunks = [];
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) break;
+                
+                chunks.push(value);
+                downloadedBytes += value.length;
+                
+                const elapsedTime = (Date.now() - startTime) / 1000;
+                const speed = downloadedBytes / elapsedTime;
+                const remainingTime = totalSize > 0 ? (totalSize - downloadedBytes) / speed : 0;
+                const progress = totalSize > 0 ? (downloadedBytes / totalSize) * 100 : 0;
+                
+                this.updateDownloadProgress(progress, downloadedBytes, totalSize, speed, remainingTime);
+            }
+            
+            // 合并所有chunk
+            const blob = new Blob(chunks);
+            const blobUrl = window.URL.createObjectURL(blob);
+            
+            // 创建下载链接
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            // 清理
+            setTimeout(() => {
+                window.URL.revokeObjectURL(blobUrl);
+                this.hideDownloadProgress();
+            }, 1000);
+            
+            this.showToast(`文件 ${filename} 下载完成`, 'success');
+            
+        } catch (error) {
+            this.hideDownloadProgress();
+            this.showToast(`下载失败：${error.message}`, 'error');
+        }
+    }
+
+    showDownloadProgress(filename, totalSize) {
+        // 创建下载进度模态框
+        const modalHtml = `
+            <div id="download-progress-modal" class="upload-progress" style="z-index: 9999;">
+                <div class="upload-progress-icon">
+                    <i class="fas fa-download"></i>
+                </div>
+                <h5>正在下载 ${filename}</h5>
+                <p class="upload-progress-text">请稍候，文件正在下载中</p>
+                <div class="upload-progress-bar">
+                    <div class="upload-progress-fill" id="download-progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="upload-progress-info">
+                    <div class="progress-info-item">
+                        <span class="info-label">下载速度：</span>
+                        <span id="download-speed" class="info-value">0 KB/s</span>
+                    </div>
+                    <div class="progress-info-item">
+                        <span class="info-label">剩余时间：</span>
+                        <span id="download-time" class="info-value">计算中...</span>
+                    </div>
+                    <div class="progress-info-item">
+                        <span class="info-label">已下载：</span>
+                        <span id="download-size" class="info-value">0 B / ${this.formatFileSize(totalSize)}</span>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm mt-3" onclick="fileManager.cancelDownload()">
+                    <i class="fas fa-times me-1"></i>取消下载
+                </button>
+            </div>
+        `;
+        
+        // 添加到body
+        const div = document.createElement('div');
+        div.innerHTML = modalHtml;
+        document.body.appendChild(div.firstElementChild);
+    }
+
+    updateDownloadProgress(progress, downloaded, total, speed, remainingTime) {
+        const progressFill = document.getElementById('download-progress-fill');
+        const speedElement = document.getElementById('download-speed');
+        const timeElement = document.getElementById('download-time');
+        const sizeElement = document.getElementById('download-size');
+        
+        if (progressFill) {
+            progressFill.style.width = progress + '%';
+        }
+        
+        if (speedElement) {
+            speedElement.textContent = this.formatSpeed(speed);
+        }
+        
+        if (timeElement) {
+            timeElement.textContent = this.formatTimeRemaining(remainingTime);
+        }
+        
+        if (sizeElement) {
+            sizeElement.textContent = `${this.formatFileSize(downloaded)} / ${this.formatFileSize(total)}`;
+        }
+    }
+
+    hideDownloadProgress() {
+        const modal = document.getElementById('download-progress-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    cancelDownload() {
+        // 取消下载逻辑
+        this.hideDownloadProgress();
+        this.showToast('下载已取消', 'info');
+    }
+
     // Toast通知系统
     showToast(message, type = 'info', duration = 5000) {
         const toastContainer = document.querySelector('.toast-container');
@@ -478,6 +610,46 @@ class FileManager {
             'info': '信息'
         };
         return titles[type] || titles['info'];
+    }
+
+    formatSpeed(bytesPerSecond) {
+        if (bytesPerSecond === 0) return '0 B/s';
+        
+        const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+        let speed = bytesPerSecond;
+        let unitIndex = 0;
+        
+        while (speed >= 1024 && unitIndex < units.length - 1) {
+            speed /= 1024;
+            unitIndex++;
+        }
+        
+        return `${speed.toFixed(1)} ${units[unitIndex]}`;
+    }
+
+    formatTimeRemaining(seconds) {
+        if (seconds === Infinity || isNaN(seconds) || seconds < 0) {
+            return '计算中...';
+        }
+        
+        if (seconds < 60) {
+            return `${Math.ceil(seconds)} 秒`;
+        } else if (seconds < 3600) {
+            const minutes = Math.ceil(seconds / 60);
+            return `${minutes} 分钟`;
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.ceil((seconds % 3600) / 60);
+            return `${hours}小时${minutes}分钟`;
+        }
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
     // 工具方法

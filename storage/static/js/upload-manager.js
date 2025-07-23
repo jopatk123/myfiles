@@ -195,28 +195,64 @@ class UploadManager {
             formData.append('description', description);
         }
 
-        try {
-            const response = await fetch('/upload/', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': this.getCsrfToken()
-                }
-            });
+        // 计算总文件大小
+        const totalSize = this.selectedFiles.reduce((total, file) => total + file.size, 0);
+        const startTime = Date.now();
 
-            const result = await response.json();
-            
-            if (result.success) {
-                this.handleUploadSuccess(result);
-            } else {
-                this.handleUploadError(result.error || '上传失败');
-            }
+        try {
+            await this.uploadWithProgress(formData, totalSize, startTime);
         } catch (error) {
             this.handleUploadError('网络错误：' + error.message);
         } finally {
             this.isUploading = false;
             this.hideUploadProgress();
         }
+    }
+
+    uploadWithProgress(formData, totalSize, startTime) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', (event) => {
+                if (event.lengthComputable) {
+                    const loaded = event.loaded;
+                    const total = event.total;
+                    const progress = (loaded / total) * 100;
+                    const elapsedTime = (Date.now() - startTime) / 1000;
+                    const speed = loaded / elapsedTime; // 字节/秒
+                    const remainingTime = (total - loaded) / speed; // 剩余时间（秒）
+
+                    this.updateProgressWithSpeed(progress, loaded, total, speed, remainingTime);
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    try {
+                        const result = JSON.parse(xhr.responseText);
+                        if (result.success) {
+                            this.handleUploadSuccess(result);
+                            resolve(result);
+                        } else {
+                            this.handleUploadError(result.error || '上传失败');
+                            reject(new Error(result.error || '上传失败'));
+                        }
+                    } catch (e) {
+                        reject(e);
+                    }
+                } else {
+                    reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                }
+            });
+
+            xhr.addEventListener('error', () => {
+                reject(new Error('网络错误'));
+            });
+
+            xhr.open('POST', '/upload/');
+            xhr.setRequestHeader('X-CSRFToken', this.getCsrfToken());
+            xhr.send(formData);
+        });
     }
 
     showUploadProgress() {
@@ -244,6 +280,63 @@ class UploadManager {
         const percentage = (current / total) * 100;
         progressFill.style.width = percentage + '%';
         uploadCurrent.textContent = current;
+    }
+
+    updateProgressWithSpeed(progress, loaded, total, speed, remainingTime) {
+        const progressFill = document.querySelector('.upload-progress-fill');
+        const speedElement = document.getElementById('upload-speed');
+        const timeElement = document.getElementById('upload-time');
+        const sizeElement = document.getElementById('upload-size');
+        
+        // 更新进度条
+        progressFill.style.width = progress + '%';
+        
+        // 更新网速显示
+        if (speedElement) {
+            speedElement.textContent = this.formatSpeed(speed);
+        }
+        
+        // 更新剩余时间
+        if (timeElement) {
+            timeElement.textContent = this.formatTimeRemaining(remainingTime);
+        }
+        
+        // 更新已传大小
+        if (sizeElement) {
+            sizeElement.textContent = `${this.formatFileSize(loaded)} / ${this.formatFileSize(total)}`;
+        }
+    }
+
+    formatSpeed(bytesPerSecond) {
+        if (bytesPerSecond === 0) return '0 B/s';
+        
+        const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+        let speed = bytesPerSecond;
+        let unitIndex = 0;
+        
+        while (speed >= 1024 && unitIndex < units.length - 1) {
+            speed /= 1024;
+            unitIndex++;
+        }
+        
+        return `${speed.toFixed(1)} ${units[unitIndex]}`;
+    }
+
+    formatTimeRemaining(seconds) {
+        if (seconds === Infinity || isNaN(seconds) || seconds < 0) {
+            return '计算中...';
+        }
+        
+        if (seconds < 60) {
+            return `${Math.ceil(seconds)} 秒`;
+        } else if (seconds < 3600) {
+            const minutes = Math.ceil(seconds / 60);
+            return `${minutes} 分钟`;
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.ceil((seconds % 3600) / 60);
+            return `${hours}小时${minutes}分钟`;
+        }
     }
 
     hideUploadProgress() {
