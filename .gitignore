@@ -1,0 +1,44 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# 环境变量文件（包含敏感信息）
+.env
+.env.prod
+.env.local
+.env.development
+.env.test
+
+# 媒体文件
+media/
+uploads/
+
+# 静态文件
+staticfiles/
+static/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# 备份文件
+*.backup
+*.bak
+
+# 测试文件
+test_*.py
+*_test.py

@@ -6,7 +6,124 @@ SERVER_IP=${SERVER_IP:-"43.163.120.212"}
 SERVER_TYPE=${SERVER_TYPE:-"OpenCloudOS"}
 PREFERRED_PORTS=(80 8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090)
 SELECTED_PORT=""
+PROJECT_NAME=$(basename "$(pwd)")
+COMPOSE_PROJECT_NAME="${PROJECT_NAME}_prod"
+EXISTING_CONTAINERS=""
 set -e
+
+# 检测相同项目容器函数
+check_existing_containers() {
+    echo "🔍 检测是否已有相同项目的容器运行..."
+    
+    # 检查当前目录的docker-compose容器
+    local current_containers=$(docker compose -f docker-compose.prod.yml ps -q 2>/dev/null || echo "")
+    
+    # 检查是否有同名项目的容器
+    local project_containers=$(docker ps -a --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "")
+    
+    # 检查是否有相同镜像名称的容器
+    local image_containers=$(docker ps -a --filter "ancestor=${PROJECT_NAME}" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "")
+    
+    if [ -n "$current_containers" ]; then
+        echo "⚠️  发现当前项目的容器正在运行："
+        docker compose -f docker-compose.prod.yml ps
+        EXISTING_CONTAINERS="current"
+        return 0
+    fi
+    
+    if [ -n "$project_containers" ] && [ "$project_containers" != "NAMES	STATUS	PORTS" ]; then
+        echo "⚠️  发现同名项目的容器："
+        echo "$project_containers"
+        EXISTING_CONTAINERS="project"
+        return 0
+    fi
+    
+    if [ -n "$image_containers" ] && [ "$image_containers" != "NAMES	STATUS	PORTS" ]; then
+        echo "⚠️  发现相同镜像的容器："
+        echo "$image_containers"
+        EXISTING_CONTAINERS="image"
+        return 0
+    fi
+    
+    echo "✅ 未发现相同项目的容器"
+    return 1
+}
+
+# 处理现有容器函数
+handle_existing_containers() {
+    if [ -z "$EXISTING_CONTAINERS" ]; then
+        return 0
+    fi
+    
+    echo ""
+    echo "🤔 发现已存在的容器，请选择处理方式："
+    echo "   1) 停止并替换现有容器（推荐）"
+    echo "   2) 保留现有容器，使用不同端口部署新实例"
+    echo "   3) 取消部署"
+    echo ""
+    
+    while true; do
+        read -p "请输入选择 (1/2/3): " choice
+        case $choice in
+            1)
+                echo "🛑 停止并清理现有容器..."
+                if [ "$EXISTING_CONTAINERS" = "current" ]; then
+                    docker compose -f docker-compose.prod.yml down -v
+                else
+                    # 停止所有相关容器
+                    docker ps -a --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME" -q | xargs -r docker stop
+                    docker ps -a --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME" -q | xargs -r docker rm
+                fi
+                echo "✅ 现有容器已清理"
+                break
+                ;;
+            2)
+                echo "📝 将为新实例寻找不同的端口..."
+                break
+                ;;
+            3)
+                echo "❌ 部署已取消"
+                exit 0
+                ;;
+            *)
+                echo "❌ 无效选择，请输入 1、2 或 3"
+                ;;
+        esac
+    done
+}
+
+# 获取现有容器端口函数
+get_existing_container_ports() {
+    local used_ports=()
+    
+    # 获取所有Docker容器使用的端口
+    local docker_ports=$(docker ps --format "table {{.Ports}}" | grep -oE '[0-9]+:' | sed 's/://' | sort -n | uniq 2>/dev/null || echo "")
+    
+    if [ -n "$docker_ports" ]; then
+        while IFS= read -r port; do
+            if [ -n "$port" ]; then
+                used_ports+=($port)
+            fi
+        done <<< "$docker_ports"
+    fi
+    
+    # 从首选端口列表中排除已使用的端口
+    local available_ports=()
+    for port in "${PREFERRED_PORTS[@]}"; do
+        local port_used=false
+        for used_port in "${used_ports[@]}"; do
+            if [ "$port" = "$used_port" ]; then
+                port_used=true
+                break
+            fi
+        done
+        if [ "$port_used" = false ] && ! check_port $port; then
+            available_ports+=($port)
+        fi
+    done
+    
+    PREFERRED_PORTS=("${available_ports[@]}")
+}
 
 # 端口检测函数
 check_port() {
@@ -127,6 +244,14 @@ if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/
     exit 1
 fi
 
+# 检测现有容器
+if check_existing_containers; then
+    handle_existing_containers
+fi
+
+# 获取现有容器端口信息，避免冲突
+get_existing_container_ports
+
 # 端口检测和配置
 if ! find_available_port; then
     echo "❌ 无法找到可用端口，部署终止"
@@ -156,7 +281,7 @@ if [ -d ".git" ]; then
     git pull origin main || git pull origin master || echo "⚠️  Git拉取失败或未配置"
 fi
 
-# 停止现有容器
+# 最终检查并停止现有容器（如果用户选择了替换）
 if [ "$(docker compose -f docker-compose.prod.yml ps -q 2>/dev/null)" ]; then
     echo "🛑 停止现有生产容器..."
     docker compose -f docker-compose.prod.yml down
@@ -171,9 +296,18 @@ echo "🔨 构建生产镜像..."
 docker compose -f docker-compose.prod.yml build --no-cache
 
 # 设置环境变量
-echo "� 设置生生产环境变量..."
+echo "🔧 设置生产环境变量..."
 export DEBUG=False
-export SECRET_KEY=$(python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())' 2>/dev/null || echo 'django-insecure-pb8ss3+s*8jt3cyh$igyt3cx71xh#mtq@xo=u1l%l+)4*dlj5k')
+export SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())' 2>/dev/null || echo 'django-insecure-pb8ss3+s*8jt3cyh$igyt3cx71xh#mtq@xo=u1l%l+)4*dlj5k')
+
+# 验证Django配置
+echo "🧪 验证Django配置..."
+if python3 test_django_config.py; then
+    echo "✅ Django配置验证通过"
+else
+    echo "❌ Django配置验证失败，请检查配置"
+    exit 1
+fi
 
 # 启动服务
 echo "🔄 启动生产服务..."
@@ -182,6 +316,21 @@ docker compose -f docker-compose.prod.yml up -d
 # 等待服务启动
 echo "⏳ 等待服务启动..."
 sleep 30
+
+# 检查容器状态
+echo "🔍 检查容器启动状态..."
+sleep 10
+
+# 显示容器日志以诊断问题
+echo "📋 显示容器启动日志..."
+docker compose -f docker-compose.prod.yml logs --tail=20
+
+# 检查容器是否正在运行
+if ! docker compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+    echo "❌ 容器启动失败！显示完整日志："
+    docker compose -f docker-compose.prod.yml logs
+    exit 1
+fi
 
 # 运行数据库迁移
 echo "🗄️  运行数据库迁移..."
@@ -246,10 +395,14 @@ echo "✅ OpenCloudOS 生产环境部署完成！"
 echo "🎉 =================================="
 echo ""
 echo "📊 部署信息："
-echo "   🖥️  服务器类型: $SERVER_TYPE"
-echo "   📍 服务器IP: $SERVER_IP"
+echo "   � 项目服名称: $PROJECT_NAME"
+echo "   �️  服务器:类型: $SERVER_TYPE"
+echo "   �  服务器IP: $SERVER_IP"
 echo "   🔌 使用端口: $SELECTED_PORT"
 echo "   ⏰ 部署时间: $(date)"
+if [ -n "$EXISTING_CONTAINERS" ]; then
+    echo "   ♻️  容器处理: 已处理现有容器冲突"
+fi
 echo ""
 echo "🌐 访问地址："
 echo "   🌍 外网访问: http://$SERVER_IP:$SELECTED_PORT"
@@ -261,6 +414,9 @@ echo "   🛑 停止服务: docker compose -f docker-compose.prod.yml down"
 echo "   🔄 重启服务: docker compose -f docker-compose.prod.yml restart"
 echo "   💻 进入容器: docker compose -f docker-compose.prod.yml exec web bash"
 echo "   📊 查看状态: docker compose -f docker-compose.prod.yml ps"
+echo ""
+echo "🐳 当前所有相关容器状态："
+docker ps -a --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "   无相关容器"
 echo ""
 echo "🔧 故障排除："
 echo "   如果无法访问，请检查："

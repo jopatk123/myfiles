@@ -113,3 +113,10 @@ def get_storage_info(request):
         'is_nearly_full': storage_info['is_nearly_full']
     })
 
+def health_check(request):
+    """健康检查端点"""
+    return JsonResponse({
+        'status': 'ok',
+        'message': 'Application is running'
+    })
+

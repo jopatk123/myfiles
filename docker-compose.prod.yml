@@ -11,10 +11,8 @@ services:
       - static_volume:/app/staticfiles
     expose:
       - "8000"
-    environment:
-      - DEBUG=${DEBUG:-False}
-      - DJANGO_SETTINGS_MODULE=personal_cloud_project.settings
-      - SECRET_KEY=${SECRET_KEY}
+    env_file:
+      - .env.prod
     restart: always
 
   nginx:
