@@ -2,8 +2,33 @@ from django.db import models
 import os
 import mimetypes
 
+class Folder(models.Model):
+    name = models.CharField(max_length=255)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['name', 'parent']
+    
+    def __str__(self):
+        return self.name
+    
+    def get_full_path(self):
+        """获取文件夹的完整路径"""
+        if self.parent:
+            return f"{self.parent.get_full_path()}/{self.name}"
+        return self.name
+    
+    def get_file_count(self):
+        """获取文件夹中的文件数量（包括子文件夹）"""
+        count = self.files.count()
+        for subfolder in self.subfolders.all():
+            count += subfolder.get_file_count()
+        return count
+
 class UploadedFile(models.Model):
     file = models.FileField(upload_to='uploads/')
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True, related_name='files')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     description = models.CharField(max_length=255, blank=True)
 

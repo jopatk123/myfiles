@@ -627,4 +627,146 @@
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-5px); }
     75% { transform: translateX(5px); }
+}/* 文件夹相关
+样式 */
+.folder-card {
+    cursor: pointer;
+}
+
+.folder-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.folder-card .file-icon {
+    cursor: pointer;
+}
+
+/* 面包屑导航 */
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
+    color: #6c757d;
+}
+
+.breadcrumb-item a {
+    color: #0d6efd;
+}
+
+.breadcrumb-item.active {
+    color: #6c757d;
+}
+
+/* 右键菜单样式 */
+.context-menu {
+    position: absolute;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    min-width: 150px;
+    padding: 0.5rem 0;
+}
+
+.context-menu-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: #212529;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.context-menu-item:hover {
+    background-color: #f8f9fa;
+}
+
+.context-menu-item.text-danger:hover {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background-color: #dee2e6;
+    margin: 0.5rem 0;
+}
+
+/* 文件夹树样式 */
+.folder-tree {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+}
+
+.folder-tree-item {
+    padding: 0.5rem;
+    cursor: pointer;
+    border-radius: 0.25rem;
+    transition: background-color 0.15s ease-in-out;
+    display: flex;
+    align-items: center;
+}
+
+.folder-tree-item:hover {
+    background-color: #f8f9fa;
+}
+
+.folder-tree-item.selected {
+    background-color: #e7f3ff;
+    color: #0d6efd;
+}
+
+.folder-tree-item i {
+    width: 16px;
+    text-align: center;
+}
+
+/* 上传按钮禁用状态 */
+#upload-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+#upload-btn:disabled:hover {
+    transform: none;
+}
+
+/* 加载动画 */
+.loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0d6efd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .context-menu {
+        min-width: 120px;
+    }
+    
+    .folder-tree {
+        max-height: 200px;
+    }
+    
+    .breadcrumb {
+        font-size: 0.875rem;
+    }
 }

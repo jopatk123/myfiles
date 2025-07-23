@@ -287,13 +287,44 @@ if [ "$(docker compose -f docker-compose.prod.yml ps -q 2>/dev/null)" ]; then
     docker compose -f docker-compose.prod.yml down
 fi
 
-# 清理旧镜像（可选，节省空间）
-echo "🧹 清理未使用的Docker镜像..."
-docker image prune -f
 
-# 构建新镜像
-echo "🔨 构建生产镜像..."
-docker compose -f docker-compose.prod.yml build --no-cache
+# 构建新镜像（优化缓存判断）
+echo "🔨 检查是否需要重建镜像..."
+
+# 定义关键文件（根据项目实际依赖文件调整，如requirements.txt、package.json等）
+CRITICAL_FILES=(
+    "Dockerfile.prod" 
+    "requirements.txt"  # Python项目依赖
+    "package.json"      # Node.js项目依赖（如有）
+    "docker-compose.prod.yml"
+)
+
+# 生成关键文件的哈希值，用于判断是否变更
+generate_cache_key() {
+    local cache_key=""
+    for file in "${CRITICAL_FILES[@]}"; do
+        if [ -f "$file" ]; then
+            # 计算文件内容哈希（忽略空文件）
+            local hash=$(sha256sum "$file" | awk '{print $1}')
+            cache_key+="$hash"
+        fi
+    done
+    echo "$cache_key" | sha256sum | awk '{print $1}'  # 合并为一个哈希值
+}
+
+# 检查上次构建的缓存key
+CACHE_KEY_FILE=".docker_build_cache_key"
+current_key=$(generate_cache_key)
+previous_key=$(cat "$CACHE_KEY_FILE" 2>/dev/null || echo "")
+
+if [ "$current_key" = "$previous_key" ] && docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "${PROJECT_NAME}_prod"; then
+    echo "✅ 关键文件未变更，使用现有镜像缓存"
+    docker compose -f docker-compose.prod.yml build  # 不禁用缓存，直接使用缓存
+else
+    echo "🔄 关键文件有变更，重建镜像（禁用缓存）"
+    docker compose -f docker-compose.prod.yml build --no-cache  # 仅变更时禁用缓存
+    echo "$current_key" > "$CACHE_KEY_FILE"  # 保存新的缓存key
+fi
 
 # 设置环境变量
 echo "🔧 设置生产环境变量..."

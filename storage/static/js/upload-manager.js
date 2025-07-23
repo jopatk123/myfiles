@@ -173,6 +173,9 @@ class UploadManager {
     async uploadFiles() {
         if (this.selectedFiles.length === 0 || this.isUploading) {
             console.log('Upload blocked:', { hasFiles: this.selectedFiles.length > 0, isUploading: this.isUploading });
+            if (this.isUploading) {
+                this.showToast('文件正在上传中，请稍候...', 'warning');
+            }
             return;
         }
 
@@ -189,7 +192,9 @@ class UploadManager {
                 return;
             }
 
+            // 设置上传状态并禁用按钮
             this.isUploading = true;
+            this.updateUploadButton();
             this.showUploadProgress();
 
             const formData = new FormData();
