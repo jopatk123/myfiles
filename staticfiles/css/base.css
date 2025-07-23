@@ -1,4 +1,4 @@
-/* 基础样式和变量定义 */
+/* 基础样式和CSS变量定义 */
 :root {
     --primary-color: #4f46e5;
     --primary-hover: #4338ca;
@@ -35,7 +35,7 @@ body {
     min-height: 100vh;
 }
 
-/* 导航栏样式 */
+/* 顶部导航栏样式 */
 .navbar {
     background: linear-gradient(135deg, var(--primary-color), #6366f1);
     box-shadow: var(--shadow-lg);
@@ -59,12 +59,12 @@ body {
     font-weight: 500;
 }
 
-/* 主容器 */
+/* 主要内容容器 */
 .container {
     max-width: 1200px;
 }
 
-/* 动画效果 */
+/* CSS动画效果定义 */
 .fade-in {
     animation: fadeIn 0.6s ease-out;
 }
@@ -110,7 +110,7 @@ body {
     }
 }
 
-/* 响应式设计 */
+/* 移动端响应式设计 */
 @media (max-width: 768px) {
     .container {
         padding-left: 1rem;
@@ -122,7 +122,7 @@ body {
     }
 }
 
-/* 滚动条样式 */
+/* 自定义滚动条样式 */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -143,13 +143,13 @@ body {
     background: var(--secondary-color);
 }
 
-/* 选择文本样式 */
+/* 文本选中时的样式 */
 ::selection {
     background: rgba(79, 70, 229, 0.2);
     color: var(--primary-color);
 }
 
-/* 焦点样式 */
+/* 元素获得焦点时的样式 */
 :focus {
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;

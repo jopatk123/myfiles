@@ -1,6 +1,6 @@
-/* 组件样式 */
+/* UI组件样式定义 */
 
-/* 卡片组件 */
+/* 卡片组件样式 */
 .card {
     border: none;
     border-radius: var(--radius-lg);
@@ -32,7 +32,7 @@
     margin-bottom: 0;
 }
 
-/* 按钮组件 */
+/* 按钮组件样式 */
 .btn {
     border-radius: var(--radius-md);
     font-weight: 500;
@@ -123,7 +123,7 @@
     font-size: 1rem;
 }
 
-/* 按钮组 */
+/* 按钮组合样式 */
 .btn-group .btn {
     border-radius: 0;
 }
@@ -138,7 +138,7 @@
     border-bottom-right-radius: var(--radius-md);
 }
 
-/* 表单组件 */
+/* 表单输入组件样式 */
 .form-control {
     border: 2px solid var(--border-color);
     border-radius: var(--radius-md);
@@ -153,7 +153,7 @@
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
-/* 进度条 */
+/* 进度条组件样式 */
 .progress {
     height: 8px;
     border-radius: var(--radius-sm);
@@ -180,7 +180,7 @@
     0% { background-position-x: 1rem; }
 }
 
-/* 徽章 */
+/* 徽章标签样式 */
 .badge {
     font-size: 0.75rem;
     font-weight: 600;
@@ -192,7 +192,7 @@
     background: linear-gradient(135deg, var(--primary-color), #6366f1) !important;
 }
 
-/* 表格 */
+/* 数据表格样式 */
 .table {
     border-collapse: separate;
     border-spacing: 0;
@@ -217,7 +217,7 @@
     background-color: rgba(79, 70, 229, 0.05);
 }
 
-/* Toast 通知 */
+/* 消息通知组件样式 */
 .toast {
     border: none;
     border-radius: var(--radius-lg);
@@ -236,7 +236,7 @@
     font-size: 0.875rem;
 }
 
-/* 加载动画 */
+/* 加载中动画效果 */
 .loading-spinner {
     display: inline-block;
     width: 20px;
@@ -251,7 +251,7 @@
     to { transform: rotate(360deg); }
 }
 
-/* 工具提示 */
+/* 悬浮提示框样式 */
 .tooltip {
     font-size: 0.75rem;
 }
@@ -262,7 +262,7 @@
     padding: 0.5rem 0.75rem;
 }
 
-/* 模态框 */
+/* 弹出模态框样式 */
 .modal-content {
     border: none;
     border-radius: var(--radius-lg);
@@ -283,7 +283,7 @@
     padding: 1.5rem;
 }
 
-/* 下拉菜单 */
+/* 下拉菜单组件样式 */
 .dropdown-menu {
     border: none;
     border-radius: var(--radius-lg);
@@ -303,7 +303,7 @@
     color: var(--primary-color);
 }
 
-/* 分页 */
+/* 分页导航样式 */
 .pagination .page-link {
     border: 2px solid var(--border-color);
     color: var(--text-secondary);
