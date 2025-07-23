@@ -41,5 +41,8 @@ docker compose exec web python manage.py collectstatic --noinput || echo "⚠️
 echo "📊 Current running containers:"
 docker compose ps
 
-echo "✅ Deployment finished successfully!"
+echo "✅ DEVELOPMENT deployment finished successfully!"
 echo "🌐 Your application should be available at: http://localhost:8000"
+echo "📁 Uploaded files will be saved in: media/uploads/ folder"
+echo ""
+echo "📝 For PRODUCTION deployment, use: ./deploy_prod.sh"

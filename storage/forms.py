@@ -6,6 +6,6 @@ class UploadFileForm(forms.ModelForm):
         model = UploadedFile
         fields = ('file', 'description')
         widgets = {
-            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Optional: file description'}),
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '可选：文件描述'}),
             'file': forms.FileInput(attrs={'class': 'form-control'}),
         }

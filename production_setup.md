@@ -40,8 +40,17 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 ```
 
 ### 4. 运行部署
+
+**开发环境部署（Django开发服务器）：**
 ```bash
 ./deploy.sh
+# 访问: http://localhost:8000
+```
+
+**生产环境部署（Nginx + Gunicorn）：**
+```bash
+./deploy_prod.sh
+# 访问: http://localhost
 ```
 
 ## 常用命令
