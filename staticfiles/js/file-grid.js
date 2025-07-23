@@ -312,6 +312,46 @@ class FileGridManager {
         return ext || 'unknown';
     }
 
+    // 批量删除选中文件
+    async deleteSelectedFiles() {
+        if (this.selectedFiles.size === 0) return;
+
+        if (!confirm(`确定要删除选中的 ${this.selectedFiles.size} 个文件吗？`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
+                },
+                body: JSON.stringify({
+                    file_ids: Array.from(this.selectedFiles)
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                // 移除已删除的文件
+                this.selectedFiles.forEach(fileId => {
+                    this.removeFileFromGrid(fileId);
+                });
+                
+                this.showToast(`成功删除 ${result.deleted_count} 个文件`, 'success');
+                this.selectedFiles.clear();
+                this.updateSelectionUI();
+                this.updateStorageInfo();
+            } else {
+                this.showToast('删除失败：' + result.error, 'error');
+            }
+        } catch (error) {
+            this.showToast('删除失败：' + error.message, 'error');
+        }
+    }
+
     // 工具方法
     getCsrfToken() {
         return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
@@ -364,4 +404,4 @@ style.textContent = `
 document.head.appendChild(style);
 
 // 初始化文件网格管理器
-const fileGridManager = new FileGridManager();
+window.fileGridManager = new FileGridManager();

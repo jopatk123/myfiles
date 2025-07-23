@@ -117,6 +117,28 @@ class FileManager {
     async deleteSelectedFiles() {
         if (this.selectedFiles.length === 0) return;
 
+        // 直接调用对应视图的删除方法
+        if (this.currentView === 'grid') {
+            // 网格视图：调用网格管理器的批量删除
+            if (window.fileGridManager && window.fileGridManager.deleteSelectedFiles) {
+                await window.fileGridManager.deleteSelectedFiles();
+            } else {
+                await this.performBatchDelete();
+            }
+        } else {
+            // 列表视图：调用列表管理器的批量删除
+            if (window.fileListManager && window.fileListManager.deleteSelectedFiles) {
+                await window.fileListManager.deleteSelectedFiles();
+            } else {
+                await this.performBatchDelete();
+            }
+        }
+    }
+
+    // 备用的批量删除方法
+    async performBatchDelete() {
+        if (this.selectedFiles.length === 0) return;
+
         // 显示确认对话框
         const result = await this.showConfirmDialog(
             '删除确认',
@@ -128,7 +150,7 @@ class FileManager {
 
         try {
             // 显示加载状态
-            this.showLoadingToast('正在删除文件...');
+            const loadingToast = this.showLoadingToast('正在删除文件...');
 
             const response = await fetch('/delete/', {
                 method: 'POST',
@@ -142,6 +164,9 @@ class FileManager {
             });
 
             const result = await response.json();
+            
+            // 隐藏加载提示
+            loadingToast.hide();
             
             if (result.success) {
                 this.showToast(`成功删除 ${result.deleted_count} 个文件`, 'success');

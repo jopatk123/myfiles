@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    command: gunicorn personal_cloud_project.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 60 --reload
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+      - static_volume:/app/staticfiles
+    expose:
+      - "8000"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=django-insecure-pb8ss3+s*8jt3cyh$igyt3cx71xh#mtq@xo=u1l%l+)4*dlj5k
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - DJANGO_SETTINGS_MODULE=personal_cloud_project.settings
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.local.conf:/etc/nginx/nginx.conf:ro
+      - media_volume:/app/media:ro
+      - static_volume:/app/staticfiles:ro
+    depends_on:
+      - web
+    restart: always
+
+volumes:
+  media_volume:
+  static_volume:

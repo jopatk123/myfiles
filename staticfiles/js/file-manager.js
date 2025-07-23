@@ -117,6 +117,28 @@ class FileManager {
     async deleteSelectedFiles() {
         if (this.selectedFiles.length === 0) return;
 
+        // 直接调用对应视图的删除方法
+        if (this.currentView === 'grid') {
+            // 网格视图：调用网格管理器的批量删除
+            if (window.fileGridManager && window.fileGridManager.deleteSelectedFiles) {
+                await window.fileGridManager.deleteSelectedFiles();
+            } else {
+                await this.performBatchDelete();
+            }
+        } else {
+            // 列表视图：调用列表管理器的批量删除
+            if (window.fileListManager && window.fileListManager.deleteSelectedFiles) {
+                await window.fileListManager.deleteSelectedFiles();
+            } else {
+                await this.performBatchDelete();
+            }
+        }
+    }
+
+    // 备用的批量删除方法
+    async performBatchDelete() {
+        if (this.selectedFiles.length === 0) return;
+
         // 显示确认对话框
         const result = await this.showConfirmDialog(
             '删除确认',
@@ -128,7 +150,7 @@ class FileManager {
 
         try {
             // 显示加载状态
-            this.showLoadingToast('正在删除文件...');
+            const loadingToast = this.showLoadingToast('正在删除文件...');
 
             const response = await fetch('/delete/', {
                 method: 'POST',
@@ -143,6 +165,9 @@ class FileManager {
 
             const result = await response.json();
             
+            // 隐藏加载提示
+            loadingToast.hide();
+            
             if (result.success) {
                 this.showToast(`成功删除 ${result.deleted_count} 个文件`, 'success');
                 
@@ -156,6 +181,9 @@ class FileManager {
                 });
                 
                 this.selectedFiles = [];
+                this.updateSelectionUI();
+                
+                // 刷新存储信息
                 this.updateStorageInfo();
             } else {
                 this.showToast('删除失败：' + result.error, 'error');
@@ -265,7 +293,10 @@ class FileManager {
             // 更新存储概览
             const fileCountDisplay = document.getElementById('file-count-display');
             const totalSizeDisplay = document.getElementById('total-size-display');
+            const maxSizeDisplay = document.getElementById('max-size-display');
+            const availableSizeDisplay = document.getElementById('available-size-display');
             const fileCountBadge = document.getElementById('file-count-badge');
+            const usagePercent = document.getElementById('usage-percent');
             
             if (fileCountDisplay) {
                 fileCountDisplay.textContent = data.file_count;
@@ -273,34 +304,71 @@ class FileManager {
             if (totalSizeDisplay) {
                 totalSizeDisplay.textContent = data.formatted_size;
             }
+            if (maxSizeDisplay) {
+                maxSizeDisplay.textContent = data.formatted_max;
+            }
+            if (availableSizeDisplay) {
+                availableSizeDisplay.textContent = data.formatted_available;
+            }
             if (fileCountBadge) {
                 fileCountBadge.textContent = data.file_count;
             }
+            if (usagePercent) {
+                usagePercent.textContent = data.usage_percentage.toFixed(1) + '%';
+            }
             
             // 更新存储使用率
-            this.updateStorageUsage(data.total_size);
+            this.updateStorageUsage(data);
             
         } catch (error) {
             console.error('Failed to update storage info:', error);
         }
     }
 
-    updateStorageUsage(totalBytes) {
-        const maxBytes = 100 * 1024 * 1024; // 100MB
-        const usagePercent = (totalBytes / maxBytes) * 100;
-        
+    updateStorageUsage(data) {
         const usageBar = document.getElementById('storage-usage-bar');
         if (usageBar) {
-            usageBar.style.width = Math.min(usagePercent, 100) + '%';
+            usageBar.style.width = Math.min(data.usage_percentage, 100) + '%';
             
-            // 根据使用率改变颜色
-            if (usagePercent > 90) {
-                usageBar.className = 'progress-bar bg-danger';
-            } else if (usagePercent > 70) {
-                usageBar.className = 'progress-bar bg-warning';
+            // 根据使用率和状态改变颜色
+            if (data.is_full) {
+                usageBar.style.background = '#dc3545';
+            } else if (data.is_nearly_full) {
+                usageBar.style.background = '#ffc107';
             } else {
-                usageBar.className = 'progress-bar bg-success';
+                usageBar.style.background = 'rgba(255,255,255,0.8)';
             }
+        }
+        
+        // 显示或隐藏存储警告
+        this.updateStorageWarnings(data);
+    }
+
+    updateStorageWarnings(data) {
+        // 移除现有的警告
+        const existingAlert = document.querySelector('.storage-info .alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        // 根据存储状态添加警告
+        const storageInfo = document.querySelector('.storage-info');
+        if (data.is_full) {
+            const alertHtml = `
+                <div class="alert alert-danger mt-2 mb-0" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    存储空间已满！请删除一些文件后再上传。
+                </div>
+            `;
+            storageInfo.insertAdjacentHTML('beforeend', alertHtml);
+        } else if (data.is_nearly_full) {
+            const alertHtml = `
+                <div class="alert alert-warning mt-2 mb-0" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    存储空间即将用完，剩余 ${data.formatted_available}。
+                </div>
+            `;
+            storageInfo.insertAdjacentHTML('beforeend', alertHtml);
         }
     }
 
@@ -444,46 +512,6 @@ class FileManager {
         this.showToast('下载已取消', 'info');
     }
 
-    formatSpeed(bytesPerSecond) {
-        if (bytesPerSecond === 0) return '0 B/s';
-        
-        const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
-        let speed = bytesPerSecond;
-        let unitIndex = 0;
-        
-        while (speed >= 1024 && unitIndex < units.length - 1) {
-            speed /= 1024;
-            unitIndex++;
-        }
-        
-        return `${speed.toFixed(1)} ${units[unitIndex]}`;
-    }
-
-    formatTimeRemaining(seconds) {
-        if (seconds === Infinity || isNaN(seconds) || seconds < 0) {
-            return '计算中...';
-        }
-        
-        if (seconds < 60) {
-            return `${Math.ceil(seconds)} 秒`;
-        } else if (seconds < 3600) {
-            const minutes = Math.ceil(seconds / 60);
-            return `${minutes} 分钟`;
-        } else {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.ceil((seconds % 3600) / 60);
-            return `${hours}小时${minutes}分钟`;
-        }
-    }
-
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
     // Toast通知系统
     showToast(message, type = 'info', duration = 5000) {
         const toastContainer = document.querySelector('.toast-container');
@@ -607,6 +635,46 @@ class FileManager {
             'info': '信息'
         };
         return titles[type] || titles['info'];
+    }
+
+    formatSpeed(bytesPerSecond) {
+        if (bytesPerSecond === 0) return '0 B/s';
+        
+        const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+        let speed = bytesPerSecond;
+        let unitIndex = 0;
+        
+        while (speed >= 1024 && unitIndex < units.length - 1) {
+            speed /= 1024;
+            unitIndex++;
+        }
+        
+        return `${speed.toFixed(1)} ${units[unitIndex]}`;
+    }
+
+    formatTimeRemaining(seconds) {
+        if (seconds === Infinity || isNaN(seconds) || seconds < 0) {
+            return '计算中...';
+        }
+        
+        if (seconds < 60) {
+            return `${Math.ceil(seconds)} 秒`;
+        } else if (seconds < 3600) {
+            const minutes = Math.ceil(seconds / 60);
+            return `${minutes} 分钟`;
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.ceil((seconds % 3600) / 60);
+            return `${hours}小时${minutes}分钟`;
+        }
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
     // 工具方法
