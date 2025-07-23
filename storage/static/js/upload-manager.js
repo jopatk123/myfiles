@@ -171,38 +171,49 @@ class UploadManager {
     }
 
     async uploadFiles() {
-        if (this.selectedFiles.length === 0 || this.isUploading) return;
-
-        // 检查存储空间
-        const storageCheck = await this.checkStorageSpace();
-        if (!storageCheck.canUpload) {
-            this.showToast(storageCheck.message, 'error');
+        if (this.selectedFiles.length === 0 || this.isUploading) {
+            console.log('Upload blocked:', { hasFiles: this.selectedFiles.length > 0, isUploading: this.isUploading });
             return;
         }
 
-        this.isUploading = true;
-        this.showUploadProgress();
-
-        const formData = new FormData();
-        const description = document.getElementById('file-description').value.trim();
-
-        // 添加文件到表单数据
-        this.selectedFiles.forEach((file, index) => {
-            formData.append(`file_${index}`, file);
-        });
-        
-        if (description) {
-            formData.append('description', description);
-        }
-
-        // 计算总文件大小
-        const totalSize = this.selectedFiles.reduce((total, file) => total + file.size, 0);
-        const startTime = Date.now();
+        console.log('Starting upload process with files:', this.selectedFiles.map(f => ({ name: f.name, size: f.size })));
 
         try {
+            // 检查存储空间
+            console.log('Checking storage space...');
+            const storageCheck = await this.checkStorageSpace();
+            console.log('Storage check result:', storageCheck);
+            
+            if (!storageCheck.canUpload) {
+                this.showToast(storageCheck.message, 'error');
+                return;
+            }
+
+            this.isUploading = true;
+            this.showUploadProgress();
+
+            const formData = new FormData();
+            const description = document.getElementById('file-description').value.trim();
+
+            // 添加文件到表单数据
+            this.selectedFiles.forEach((file, index) => {
+                formData.append(`file_${index}`, file);
+            });
+            
+            if (description) {
+                formData.append('description', description);
+            }
+
+            // 计算总文件大小
+            const totalSize = this.selectedFiles.reduce((total, file) => total + file.size, 0);
+            const startTime = Date.now();
+
+            console.log('Upload data prepared:', { totalSize, fileCount: this.selectedFiles.length, description });
+            
             await this.uploadWithProgress(formData, totalSize, startTime);
         } catch (error) {
-            this.handleUploadError('网络错误：' + error.message);
+            console.error('Upload error:', error);
+            this.handleUploadError('上传失败：' + error.message);
         } finally {
             this.isUploading = false;
             this.hideUploadProgress();
@@ -212,6 +223,8 @@ class UploadManager {
     uploadWithProgress(formData, totalSize, startTime) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
+            
+            console.log('Starting XHR upload to /upload/');
             
             xhr.upload.addEventListener('progress', (event) => {
                 if (event.lengthComputable) {
@@ -227,6 +240,8 @@ class UploadManager {
             });
 
             xhr.addEventListener('load', () => {
+                console.log('Upload response:', xhr.status, xhr.responseText);
+                
                 if (xhr.status === 200) {
                     try {
                         const result = JSON.parse(xhr.responseText);
@@ -238,49 +253,60 @@ class UploadManager {
                             reject(new Error(result.error || '上传失败'));
                         }
                     } catch (e) {
-                        reject(e);
+                        console.error('JSON parse error:', e);
+                        reject(new Error('服务器响应格式错误'));
                     }
+                } else if (xhr.status === 403) {
+                    reject(new Error('权限错误：请检查CSRF token'));
+                } else if (xhr.status === 413) {
+                    reject(new Error('文件太大：请检查文件大小限制'));
                 } else {
                     reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
                 }
             });
 
             xhr.addEventListener('error', () => {
-                reject(new Error('网络错误'));
+                console.error('XHR network error');
+                reject(new Error('网络错误：无法连接到服务器'));
             });
 
+            xhr.addEventListener('timeout', () => {
+                console.error('XHR timeout');
+                reject(new Error('上传超时：请检查网络连接'));
+            });
+
+            xhr.timeout = 300000; // 5分钟超时
+            
+            const csrfToken = this.getCsrfToken();
+            console.log('Using CSRF token:', csrfToken ? 'Found' : 'Not found');
+            
             xhr.open('POST', '/upload/');
-            xhr.setRequestHeader('X-CSRFToken', this.getCsrfToken());
+            if (csrfToken) {
+                xhr.setRequestHeader('X-CSRFToken', csrfToken);
+            }
             xhr.send(formData);
         });
     }
 
     showUploadProgress() {
         const modal = document.getElementById('upload-progress-modal');
-        const uploadTotal = document.getElementById('upload-total');
         
-        uploadTotal.textContent = this.selectedFiles.length;
+        if (!modal) {
+            console.error('Upload progress modal not found');
+            return;
+        }
+        
         modal.classList.remove('d-none');
         
-        // 模拟进度更新
-        this.updateProgress(0);
-        this.progressInterval = setInterval(() => {
-            const current = parseInt(document.getElementById('upload-current').textContent);
-            if (current < this.selectedFiles.length) {
-                this.updateProgress(current + 1);
-            }
-        }, 500);
+        // 重置进度条
+        const progressFill = modal.querySelector('.upload-progress-fill');
+        if (progressFill) {
+            progressFill.style.width = '0%';
+        }
+        
+        console.log('Upload progress modal shown');
     }
 
-    updateProgress(current) {
-        const progressFill = document.querySelector('.upload-progress-fill');
-        const uploadCurrent = document.getElementById('upload-current');
-        const total = this.selectedFiles.length;
-        
-        const percentage = (current / total) * 100;
-        progressFill.style.width = percentage + '%';
-        uploadCurrent.textContent = current;
-    }
 
     updateProgressWithSpeed(progress, loaded, total, speed, remainingTime) {
         const progressFill = document.querySelector('.upload-progress-fill');
@@ -340,13 +366,17 @@ class UploadManager {
     }
 
     hideUploadProgress() {
-        if (this.progressInterval) {
-            clearInterval(this.progressInterval);
+        const modal = document.getElementById('upload-progress-modal');
+        if (modal) {
+            setTimeout(() => {
+                modal.classList.add('d-none');
+                // 重置进度条
+                const progressFill = modal.querySelector('.upload-progress-fill');
+                if (progressFill) {
+                    progressFill.style.width = '0%';
+                }
+            }, 1000);
         }
-        
-        setTimeout(() => {
-            document.getElementById('upload-progress-modal').classList.add('d-none');
-        }, 1000);
     }
 
     async checkStorageSpace() {
