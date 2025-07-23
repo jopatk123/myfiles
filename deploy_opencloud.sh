@@ -328,12 +328,19 @@ fi
 
 # 设置环境变量
 echo "🔧 设置生产环境变量..."
-export DEBUG=False
-export SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())' 2>/dev/null || echo 'django-insecure-pb8ss3+s*8jt3cyh$igyt3cx71xh#mtq@xo=u1l%l+)4*dlj5k')
+if [ ! -f ".env.prod" ]; then
+    echo "🔑 生成新的 SECRET_KEY 并创建 .env.prod 文件..."
+    SECRET_KEY=$(python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
+    echo "SECRET_KEY=$SECRET_KEY" > .env.prod
+    echo "DEBUG=False" >> .env.prod
+    echo "✅ .env.prod 文件已创建"
+else
+    echo "✅ 使用现有的 .env.prod 文件"
+fi
 
 # 验证Django配置
 echo "🧪 验证Django配置..."
-if python3 test_django_config.py; then
+if python test_django_config.py; then
     echo "✅ Django配置验证通过"
 else
     echo "❌ Django配置验证失败，请检查配置"
@@ -346,11 +353,11 @@ docker compose -f docker-compose.prod.yml up -d
 
 # 等待服务启动
 echo "⏳ 等待服务启动..."
-sleep 30
+sleep 10
 
 # 检查容器状态
 echo "🔍 检查容器启动状态..."
-sleep 10
+sleep 5
 
 # 显示容器日志以诊断问题
 echo "📋 显示容器启动日志..."
@@ -362,14 +369,6 @@ if ! docker compose -f docker-compose.prod.yml ps | grep -q "Up"; then
     docker compose -f docker-compose.prod.yml logs
     exit 1
 fi
-
-# 运行数据库迁移
-echo "🗄️  运行数据库迁移..."
-docker compose -f docker-compose.prod.yml exec -T web python manage.py migrate
-
-# 收集静态文件
-echo "📦 收集静态文件..."
-docker compose -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
 
 # 检查服务状态
 echo "📊 当前运行的容器："
