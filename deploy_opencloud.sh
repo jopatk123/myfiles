@@ -340,7 +340,7 @@ fi
 
 # 验证Django配置
 echo "🧪 验证Django配置..."
-if python3 test_django_config.py; then
+if docker compose -f docker-compose.prod.yml run --rm web python3 test_django_config.py; then
     echo "✅ Django配置验证通过"
 else
     echo "❌ Django配置验证失败，请检查配置"
