@@ -30,13 +30,34 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS', '43.163.120.212,localhost,127.0.0.1')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
 
-# CSRF设置
-CSRF_TRUSTED_ORIGINS = [
-    'http://43.163.120.212:382',
-    'https://43.163.120.212:382',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-]
+# CSRF设置 - 动态配置以支持不同端口
+def get_csrf_trusted_origins():
+    origins = [
+        'http://localhost',
+        'http://127.0.0.1',
+        'https://localhost',
+        'https://127.0.0.1',
+    ]
+    
+    # 添加服务器IP的各种端口组合
+    server_ip = '43.163.120.212'
+    common_ports = ['80', '8000', '8080', '8081', '8082', '8083', '8084', '8085']
+    
+    for port in common_ports:
+        origins.extend([
+            f'http://{server_ip}:{port}',
+            f'https://{server_ip}:{port}',
+        ])
+    
+    # 添加不带端口的配置（用于80端口）
+    origins.extend([
+        f'http://{server_ip}',
+        f'https://{server_ip}',
+    ])
+    
+    return origins
+
+CSRF_TRUSTED_ORIGINS = get_csrf_trusted_origins()
 
 # 生产环境安全设置
 if not DEBUG:
