@@ -38,7 +38,7 @@ class UploadManager {
 
     setupDragAndDrop() {
         const uploadZone = document.getElementById('upload-zone');
-        
+
         // 阻止默认拖拽行为
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             uploadZone.addEventListener(eventName, this.preventDefaults, false);
@@ -78,7 +78,7 @@ class UploadManager {
 
         // 过滤有效文件
         const validFiles = files.filter(file => this.validateFile(file));
-        
+
         if (validFiles.length === 0) {
             this.showToast('没有有效的文件可以上传', 'warning');
             return;
@@ -90,10 +90,11 @@ class UploadManager {
     }
 
     validateFile(file) {
-        // 文件大小检查 (100MB)
-        const maxSize = 100 * 1024 * 1024;
+        // 文件大小检查 - 不在前端限制单个文件大小，由后端根据总存储空间控制
+        // 只检查是否为合理的文件大小（避免意外选择超大文件）
+        const maxSize = 35 * 1024 * 1024 * 1024; // 35GB (与总容量相同)
         if (file.size > maxSize) {
-            this.showToast(`文件 ${file.name} 超过大小限制 (100MB)`, 'error');
+            this.showToast(`文件 ${file.name} 超过存储容量限制`, 'error');
             return false;
         }
 
@@ -163,9 +164,9 @@ class UploadManager {
     updateUploadButton() {
         const uploadBtn = document.getElementById('upload-btn');
         const hasFiles = this.selectedFiles.length > 0;
-        
+
         uploadBtn.disabled = !hasFiles || this.isUploading;
-        uploadBtn.innerHTML = hasFiles 
+        uploadBtn.innerHTML = hasFiles
             ? `<i class="fas fa-upload me-2"></i>上传 ${this.selectedFiles.length} 个文件`
             : `<i class="fas fa-upload me-2"></i>开始上传`;
     }
@@ -186,7 +187,7 @@ class UploadManager {
             console.log('Checking storage space...');
             const storageCheck = await this.checkStorageSpace();
             console.log('Storage check result:', storageCheck);
-            
+
             if (!storageCheck.canUpload) {
                 this.showToast(storageCheck.message, 'error');
                 return;
@@ -204,7 +205,7 @@ class UploadManager {
             this.selectedFiles.forEach((file, index) => {
                 formData.append(`file_${index}`, file);
             });
-            
+
             if (description) {
                 formData.append('description', description);
             }
@@ -214,7 +215,7 @@ class UploadManager {
             const startTime = Date.now();
 
             console.log('Upload data prepared:', { totalSize, fileCount: this.selectedFiles.length, description });
-            
+
             await this.uploadWithProgress(formData, totalSize, startTime);
         } catch (error) {
             console.error('Upload error:', error);
@@ -228,9 +229,9 @@ class UploadManager {
     uploadWithProgress(formData, totalSize, startTime) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            
+
             console.log('Starting XHR upload to /upload/');
-            
+
             xhr.upload.addEventListener('progress', (event) => {
                 if (event.lengthComputable) {
                     const loaded = event.loaded;
@@ -246,7 +247,7 @@ class UploadManager {
 
             xhr.addEventListener('load', () => {
                 console.log('Upload response:', xhr.status, xhr.responseText);
-                
+
                 if (xhr.status === 200) {
                     try {
                         const result = JSON.parse(xhr.responseText);
@@ -280,11 +281,11 @@ class UploadManager {
                 reject(new Error('上传超时：请检查网络连接'));
             });
 
-            xhr.timeout = 300000; // 5分钟超时
-            
+            xhr.timeout = 1800000; // 30分钟超时，支持大文件上传
+
             const csrfToken = this.getCsrfToken();
             console.log('Using CSRF token:', csrfToken ? 'Found' : 'Not found');
-            
+
             xhr.open('POST', '/upload/');
             if (csrfToken) {
                 xhr.setRequestHeader('X-CSRFToken', csrfToken);
@@ -295,20 +296,20 @@ class UploadManager {
 
     showUploadProgress() {
         const modal = document.getElementById('upload-progress-modal');
-        
+
         if (!modal) {
             console.error('Upload progress modal not found');
             return;
         }
-        
+
         modal.classList.remove('d-none');
-        
+
         // 重置进度条
         const progressFill = modal.querySelector('.upload-progress-fill');
         if (progressFill) {
             progressFill.style.width = '0%';
         }
-        
+
         console.log('Upload progress modal shown');
     }
 
@@ -318,20 +319,20 @@ class UploadManager {
         const speedElement = document.getElementById('upload-speed');
         const timeElement = document.getElementById('upload-time');
         const sizeElement = document.getElementById('upload-size');
-        
+
         // 更新进度条
         progressFill.style.width = progress + '%';
-        
+
         // 更新网速显示
         if (speedElement) {
             speedElement.textContent = this.formatSpeed(speed);
         }
-        
+
         // 更新剩余时间
         if (timeElement) {
             timeElement.textContent = this.formatTimeRemaining(remainingTime);
         }
-        
+
         // 更新已传大小
         if (sizeElement) {
             sizeElement.textContent = `${this.formatFileSize(loaded)} / ${this.formatFileSize(total)}`;
@@ -340,16 +341,16 @@ class UploadManager {
 
     formatSpeed(bytesPerSecond) {
         if (bytesPerSecond === 0) return '0 B/s';
-        
+
         const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
         let speed = bytesPerSecond;
         let unitIndex = 0;
-        
+
         while (speed >= 1024 && unitIndex < units.length - 1) {
             speed /= 1024;
             unitIndex++;
         }
-        
+
         return `${speed.toFixed(1)} ${units[unitIndex]}`;
     }
 
@@ -357,7 +358,7 @@ class UploadManager {
         if (seconds === Infinity || isNaN(seconds) || seconds < 0) {
             return '计算中...';
         }
-        
+
         if (seconds < 60) {
             return `${Math.ceil(seconds)} 秒`;
         } else if (seconds < 3600) {
@@ -388,10 +389,10 @@ class UploadManager {
         try {
             const response = await fetch('/storage-info/');
             const storageInfo = await response.json();
-            
+
             // 计算选中文件的总大小
             const selectedSize = this.selectedFiles.reduce((total, file) => total + file.size, 0);
-            
+
             if (storageInfo.is_full || (storageInfo.current_usage + selectedSize) > storageInfo.max_storage) {
                 const availableSpace = storageInfo.max_storage - storageInfo.current_usage;
                 return {
@@ -399,7 +400,7 @@ class UploadManager {
                     message: `存储空间不足！当前已使用 ${storageInfo.formatted_size}，剩余空间 ${storageInfo.formatted_available}，需要 ${this.formatFileSize(selectedSize)}。请删除一些文件后再试。`
                 };
             }
-            
+
             return { canUpload: true };
         } catch (error) {
             console.error('检查存储空间失败:', error);
@@ -409,7 +410,7 @@ class UploadManager {
 
     handleUploadSuccess(result) {
         this.showToast(`成功上传 ${result.files.length} 个文件！`, 'success');
-        
+
         if (result.errors && result.errors.length > 0) {
             result.errors.forEach(error => {
                 this.showToast(error, 'warning');
@@ -419,7 +420,7 @@ class UploadManager {
         // 清理界面
         this.clearSelection();
         document.getElementById('file-description').value = '';
-        
+
         // 刷新文件列表和存储信息
         this.refreshStorageInfo();
         setTimeout(() => {
@@ -431,14 +432,14 @@ class UploadManager {
         try {
             const response = await fetch('/storage-info/');
             const storageInfo = await response.json();
-            
+
             // 更新存储信息显示
             document.getElementById('total-size-display').textContent = storageInfo.formatted_size;
             document.getElementById('usage-percent').textContent = storageInfo.usage_percentage.toFixed(1) + '%';
-            
+
             const progressBar = document.getElementById('storage-usage-bar');
             progressBar.style.width = storageInfo.usage_percentage + '%';
-            
+
             // 根据使用率改变进度条颜色
             if (storageInfo.is_full) {
                 progressBar.style.background = '#dc3545';
@@ -499,9 +500,9 @@ class UploadManager {
     }
 
     getCsrfToken() {
-        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-               document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-               this.getCookieValue('csrftoken');
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+            this.getCookieValue('csrftoken');
     }
 
     getCookieValue(name) {
