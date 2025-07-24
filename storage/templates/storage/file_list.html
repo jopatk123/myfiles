@@ -440,11 +440,33 @@ document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('create-folder-modal');
         console.log('模态框元素:', modal);
         
+        // 检查确认按钮是否存在
+        const confirmBtn = document.getElementById('confirm-create-folder');
+        console.log('确认创建按钮:', confirmBtn);
+        
         // 检查Bootstrap是否加载
         console.log('Bootstrap可用:', typeof bootstrap !== 'undefined');
         
         // 检查FolderManager是否初始化
         console.log('FolderManager实例:', window.folderManager);
+        
+        // 测试确认按钮的点击事件
+        if (confirmBtn) {
+            console.log('为确认按钮添加测试事件监听器');
+            confirmBtn.addEventListener('click', function(e) {
+                console.log('确认按钮被点击！');
+                e.preventDefault();
+                
+                // 检查文件夹管理器是否存在
+                if (window.folderManager && typeof window.folderManager.createFolder === 'function') {
+                    console.log('调用 folderManager.createFolder()');
+                    window.folderManager.createFolder();
+                } else {
+                    console.error('FolderManager 不可用或 createFolder 方法不存在');
+                    alert('文件夹管理器未正确初始化');
+                }
+            });
+        }
         
         // 如果按钮存在但没有事件监听器，手动添加一个
         if (createBtn && modal) {
@@ -464,6 +486,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         const modalInstance = new bootstrap.Modal(modal);
                         modalInstance.show();
                         console.log('模态框显示成功');
+                        
+                        // 聚焦到输入框
+                        setTimeout(() => {
+                            const folderNameInput = document.getElementById('folder-name');
+                            if (folderNameInput) {
+                                folderNameInput.focus();
+                            }
+                        }, 500);
                     } else {
                         console.error('Bootstrap未加载');
                         alert('Bootstrap未加载，无法显示模态框');
