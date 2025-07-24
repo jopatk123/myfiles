@@ -26,7 +26,24 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-pb8ss3+s*8jt3cyh$igyt
 # 安全警告：不要在生产环境中开启调试模式！
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['43.163.120.212', 'localhost', '127.0.0.1']
+# 从环境变量获取ALLOWED_HOSTS，支持逗号分隔
+ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS', '43.163.120.212,localhost,127.0.0.1')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
+
+# CSRF设置
+CSRF_TRUSTED_ORIGINS = [
+    'http://43.163.120.212:382',
+    'https://43.163.120.212:382',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+
+# 生产环境安全设置
+if not DEBUG:
+    SECURE_SSL_REDIRECT = False  # 如果使用HTTPS，设置为True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
 
 
 # 应用程序定义
@@ -134,3 +151,45 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# 文件上传配置 - 取消大小限制
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024 * 1024  # 10GB 作为缓冲区
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024 * 1024  # 10GB 作为缓冲区
+
+# 日志配置
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}

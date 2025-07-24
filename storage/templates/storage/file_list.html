@@ -364,6 +364,7 @@
             </div>
             <div class="modal-body">
                 <form id="create-folder-form">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label for="folder-name" class="form-label">文件夹名称</label>
                         <input type="text" class="form-control" id="folder-name" 
@@ -449,12 +450,42 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 检查FolderManager是否初始化
         console.log('FolderManager实例:', window.folderManager);
+        console.log('FolderManager createFolder方法:', window.folderManager ? typeof window.folderManager.createFolder : 'FolderManager不存在');
         
-        // 测试确认按钮的点击事件
+        // 如果FolderManager还没有初始化，等待更长时间
+        if (!window.folderManager) {
+            console.log('FolderManager未初始化，等待更长时间...');
+            setTimeout(function() {
+                console.log('再次检查FolderManager:', window.folderManager);
+                if (window.folderManager) {
+                    console.log('FolderManager现在可用了');
+                } else {
+                    console.error('FolderManager仍然不可用，手动初始化');
+                    // 手动初始化FolderManager
+                    try {
+                        if (typeof FolderManager !== 'undefined') {
+                            window.folderManager = new FolderManager();
+                            console.log('手动初始化FolderManager成功');
+                        } else {
+                            console.error('FolderManager类不存在');
+                        }
+                    } catch (error) {
+                        console.error('手动初始化FolderManager失败:', error);
+                    }
+                }
+            }, 3000);
+        }
+        
+        // 为确认按钮添加备用事件监听器
         if (confirmBtn) {
-            console.log('为确认按钮添加测试事件监听器');
-            confirmBtn.addEventListener('click', function(e) {
-                console.log('确认按钮被点击！');
+            console.log('为确认按钮添加备用事件监听器');
+            
+            // 移除可能存在的旧事件监听器
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            
+            newConfirmBtn.addEventListener('click', function(e) {
+                console.log('备用确认按钮被点击！');
                 e.preventDefault();
                 
                 // 检查文件夹管理器是否存在
@@ -463,50 +494,119 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.folderManager.createFolder();
                 } else {
                     console.error('FolderManager 不可用或 createFolder 方法不存在');
-                    alert('文件夹管理器未正确初始化');
-                }
-            });
-        }
-        
-        // 如果按钮存在但没有事件监听器，手动添加一个
-        if (createBtn && modal) {
-            console.log('手动添加按钮事件监听器');
-            
-            // 移除可能存在的旧事件监听器
-            const newBtn = createBtn.cloneNode(true);
-            createBtn.parentNode.replaceChild(newBtn, createBtn);
-            
-            // 添加新的事件监听器
-            newBtn.addEventListener('click', function(e) {
-                console.log('手动添加的按钮点击事件触发！');
-                e.preventDefault();
-                
-                try {
-                    if (typeof bootstrap !== 'undefined') {
-                        const modalInstance = new bootstrap.Modal(modal);
-                        modalInstance.show();
-                        console.log('模态框显示成功');
-                        
-                        // 聚焦到输入框
-                        setTimeout(() => {
-                            const folderNameInput = document.getElementById('folder-name');
-                            if (folderNameInput) {
-                                folderNameInput.focus();
-                            }
-                        }, 500);
-                    } else {
-                        console.error('Bootstrap未加载');
-                        alert('Bootstrap未加载，无法显示模态框');
+                    
+                    // 手动执行创建文件夹逻辑
+                    const folderNameInput = document.getElementById('folder-name');
+                    if (!folderNameInput) {
+                        alert('找不到文件夹名称输入框');
+                        return;
                     }
-                } catch (error) {
-                    console.error('显示模态框时出错:', error);
-                    alert('显示模态框时出错: ' + error.message);
-                }
-            });
-            
-            console.log('手动事件监听器添加完成');
+                    
+                    const folderName = folderNameInput.value.trim();
+                    if (!folderName) {
+                        alert('请输入文件夹名称');
+                        return;
+                    }
+                    
+                    // 手动发送创建请求
+                    fetch('/create-folder/', {
+                        method: 'POST',
+   {
+              pt>});
+</scri    }
+
+ null; ||lder')t('forams.geeturn urlPa  r     
+ .search);.locationdowinarams(wchPew URLSearams = n urlPar    constd() {
+    rIdeetCurrentFol  function g    }
+    
+
+  Value;n cookie  retur   }
+      
+            }}
+                 ;
+    reak   b             
+    th + 1));ame.lengring(nie.substmponent(cookICoUR= decodekieValue          coo       ')) {
+    + '=(name  + 1) === .lengthg(0, nameubstrinookie.s     if (c         m();
+  es[i].triokie = cooki    const co           {
+  ength; i++) < cookies.l i0;(let i = or          f');
+   ie.split(';ment.cookdocucookies = st     con{
+        '') kie !== cument.cookie && dooocument.cf (do    i null;
+    Value =ieook       let cname) {
+ ieValue(ion getCook  funct
+     }
+    ;
+ n')srftokelue('cookieVa getC    
+          ent') ||'contAttribute(getken"]')?.f-toe="csr'meta[namelector(eryScument.qu   do        
+     e ||alu]')?.vtokenrefmiddlewasr[name=cctor('.querySelement return docu
+       ken() { getCsrfTo function   
+   // 辅助函数
+    
+ ; // 等待1秒 }, 1000) }
+   
+       件监听器添加完成');('备用事ole.logons         c      
+        );
+    }   }
+                   age);
+   + error.mess出错: ' ('显示模态框时    alert          );
+      错:', error示模态框时出le.error('显       conso           ror) {
+  catch (er  }                  }
+             );
+    模态框'显示trap未加载，无法t('Boots        aler            ');
+    rap未加载or('Bootst console.err                    else {
+   }                     }, 500);
+                      
+        }                );
+      nput.focus(meIerNa       fold                       ;
+   ''value =t.eInpulderNam         fo                     ut) {
+  NameInp (folder       if                  
+   ame');'folder-nElementById(nt.getcumedoNameInput = t folder   cons                         > {
+t(() =eou setTim                     入框并聚焦
+      // 清空输         
+                               
+    ');态框显示成功('模.logole      cons          );
+        nce.show(Instaalmod                       
+ al(modal);odotstrap.M = new bostanceonst modalIn         c        ) {
+       'undefined' !== otstrap(typeof bo     if           
+     y {  tr     
+                     );
+    ult(.preventDefa       e
+         件触发！');按钮点击事新建sole.log('备用on        c
+        ) {unction(eclick', fer('tListen.addEventn newB         新的事件监听器
+  / 添加 /
+                     teBtn);
+  newBtn, creaild(aceChplarentNode.reateBtn.pre          c
+  de(true);cloneNotn.createBn =  newBt  const         
+ 事件监听器移除可能存在的旧//        
+           );
+      听器'建按钮添加备用事件监g('为新ole.lo      cons  
+    && modal) {tn (createB      if 
+  用事件监听器// 为新建按钮添加备
+                
         }
-    }, 2000); // 等待2秒
-});
-</script>
+   });      }
+                      });
+                 e);
+or.messag' + err创建失败：t('        aler           
+     rror => {    .catch(e             
+         })                   }
+               );
+    rora.er建失败：' + dat    alert('创                        else {
+            }      ;
+       ), 1000)d(eloaon.rcatiwindow.lo) => Timeout((   set                          }
+                         
+  de();stance.hi  modalIn                              e) {
+anclInst(moda      if             
+          ce(modal);l.getInstanModatstrap. booance =Instst modalon  c                         ！');
+ 件夹创建成功   alert('文                  
+       s) {data.succes    if (                  => {
+   datathen( .                  .json())
+ > responseonse =.then(resp                   })
+               })
+                            d()
+  rrentFolderIgetCurent_id:  pa                       e,
+    : folderNamname                            y({
+ngify: JSON.striod    b                     },
+                   oken()
+    rfTen': getCs 'X-CSRFTok                         on',
+  tion/js 'applicantent-Type':   'Co            headers:                     
 {% endblock %}

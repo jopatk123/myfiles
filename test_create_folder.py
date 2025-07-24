@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """
-测试新建文件夹功能的脚本
+测试文件夹创建功能的脚本
 """
+
 import os
 import sys
 import django
 import json
 
-# 设置 Django 环境
+# 设置Django环境
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'personal_cloud_project.settings')
 django.setup()
 
 from django.test import Client
-from django.contrib.auth.models import User
+from django.urls import reverse
 from storage.models import Folder
 
 def test_create_folder():
@@ -28,20 +30,11 @@ def test_create_folder():
     print("测试创建文件夹功能...")
     print(f"测试数据: {test_data}")
     
-    # 先获取 CSRF token
-    response = client.get('/')
-    csrf_token = None
-    if 'csrftoken' in response.cookies:
-        csrf_token = response.cookies['csrftoken'].value
-        print(f"获取到 CSRF token: {csrf_token[:10]}...")
-    
-    # 发送 POST 请求
-    headers = {'HTTP_X_CSRFTOKEN': csrf_token} if csrf_token else {}
+    # 发送POST请求
     response = client.post(
         '/create-folder/',
         data=json.dumps(test_data),
-        content_type='application/json',
-        **headers
+        content_type='application/json'
     )
     
     print(f"响应状态码: {response.status_code}")
@@ -50,23 +43,83 @@ def test_create_folder():
     if response.status_code == 200:
         result = response.json()
         if result.get('success'):
-            print("✅ 文件夹创建成功!")
-            print(f"文件夹信息: {result.get('folder')}")
+            print("✅ 文件夹创建成功！")
             
-            # 验证数据库中是否真的创建了文件夹
-            folder_name = test_data['name']
-            if Folder.objects.filter(name=folder_name).exists():
-                print("✅ 数据库验证通过，文件夹已保存")
+            # 验证数据库中是否存在该文件夹
+            folder = Folder.objects.filter(name='测试文件夹').first()
+            if folder:
+                print(f"✅ 数据库验证成功，文件夹ID: {folder.id}")
                 
                 # 清理测试数据
-                Folder.objects.filter(name=folder_name).delete()
+                folder.delete()
                 print("🧹 测试数据已清理")
             else:
-                print("❌ 数据库验证失败，文件夹未保存")
+                print("❌ 数据库验证失败，未找到创建的文件夹")
         else:
             print(f"❌ 创建失败: {result.get('error')}")
     else:
         print(f"❌ 请求失败，状态码: {response.status_code}")
 
+def test_invalid_folder_names():
+    """测试非法文件夹名称"""
+    client = Client()
+    
+    invalid_names = ['test/folder', 'test\\folder', 'test:folder', 'test*folder', 'test?folder']
+    
+    print("\n测试非法文件夹名称...")
+    
+    for name in invalid_names:
+        test_data = {
+            'name': name,
+            'parent_id': None
+        }
+        
+        response = client.post(
+            '/create-folder/',
+            data=json.dumps(test_data),
+            content_type='application/json'
+        )
+        
+        if response.status_code == 400:
+            result = response.json()
+            print(f"✅ 正确拒绝非法名称 '{name}': {result.get('error')}")
+        else:
+            print(f"❌ 未正确拒绝非法名称 '{name}'")
+
+def test_empty_folder_name():
+    """测试空文件夹名称"""
+    client = Client()
+    
+    test_data = {
+        'name': '',
+        'parent_id': None
+    }
+    
+    print("\n测试空文件夹名称...")
+    
+    response = client.post(
+        '/create-folder/',
+        data=json.dumps(test_data),
+        content_type='application/json'
+    )
+    
+    if response.status_code == 400:
+        result = response.json()
+        print(f"✅ 正确拒绝空名称: {result.get('error')}")
+    else:
+        print("❌ 未正确拒绝空名称")
+
 if __name__ == '__main__':
-    test_create_folder()
+    print("开始测试文件夹创建功能...\n")
+    
+    try:
+        test_create_folder()
+        test_invalid_folder_names()
+        test_empty_folder_name()
+        
+        print("\n✅ 所有测试完成！")
+        
+    except Exception as e:
+        print(f"\n❌ 测试过程中出现错误: {e}")
+        import traceback
+        traceback.print_exc()

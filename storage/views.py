@@ -156,7 +156,6 @@ def get_storage_info(request):
         'is_nearly_full': storage_info['is_nearly_full']
     })
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def create_folder(request):
     """创建新文件夹"""
