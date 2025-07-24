@@ -152,28 +152,6 @@ class FileGridManager {
     }
 
     updateSelectionUI() {
-        const selectedCount = this.selectedFiles.size;
-        const deleteBtn = document.getElementById('delete-selected');
-        const selectAllBtn = document.getElementById('select-all');
-        
-        // 更新删除按钮
-        if (deleteBtn) {
-            deleteBtn.disabled = selectedCount === 0;
-            deleteBtn.innerHTML = selectedCount > 0 
-                ? `<i class="fas fa-trash me-1"></i>删除选中 (${selectedCount})`
-                : `<i class="fas fa-trash me-1"></i>删除选中`;
-        }
-        
-        // 更新全选按钮
-        if (selectAllBtn) {
-            const totalFiles = document.querySelectorAll('.file-card').length;
-            const allSelected = selectedCount === totalFiles && totalFiles > 0;
-            
-            selectAllBtn.innerHTML = allSelected
-                ? `<i class="fas fa-check-square me-1"></i>取消全选`
-                : `<i class="fas fa-check-square me-1"></i>全选`;
-        }
-        
         // 通知主管理器更新
         if (window.fileManager) {
             window.fileManager.updateSelectedFiles(Array.from(this.selectedFiles));
