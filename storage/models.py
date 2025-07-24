@@ -26,6 +26,17 @@ class Folder(models.Model):
             count += subfolder.get_file_count()
         return count
 
+    def delete(self, *args, **kwargs):
+        # 递归删除子文件夹
+        for subfolder in self.subfolders.all():
+            subfolder.delete()
+        
+        # 删除文件夹下的所有文件，这将触发UploadedFile的delete方法
+        for file in self.files.all():
+            file.delete()
+        
+        super().delete(*args, **kwargs)
+
 class UploadedFile(models.Model):
     file = models.FileField(upload_to='uploads/')
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True, related_name='files')

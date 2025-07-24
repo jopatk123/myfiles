@@ -28,7 +28,7 @@ RUN chmod +x /app/start_production.sh
 RUN mkdir -p /app/staticfiles
 
 # Create media directory with proper permissions
-RUN mkdir -p /app/media/uploads && chmod 755 /app/media
+RUN mkdir -p /app/media/uploads && mkdir -p /app/media/database && chmod -R 777 /app/media
 
 # Expose the port the app runs on
 EXPOSE 8000

@@ -15,10 +15,11 @@ python manage.py migrate --noinput
 echo "📦 收集静态文件..."
 python manage.py collectstatic --noinput
 
-# 创建媒体目录
-echo "📁 创建媒体目录..."
+# 创建媒体和数据库目录
+echo "📁 创建媒体和数据库目录..."
 mkdir -p /app/media/uploads
-chmod 755 /app/media
+mkdir -p /app/media/database
+chmod -R 777 /app/media
 
 echo "✅ 初始化完成，启动Gunicorn..."
 

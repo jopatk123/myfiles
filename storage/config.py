@@ -19,7 +19,7 @@ ALLOWED_FILE_EXTENSIONS = None
 
 # 禁止的文件扩展名
 FORBIDDEN_FILE_EXTENSIONS = [
-    '.exe', '.bat', '.cmd', '.com', '.pif', '.scr', '.vbs', '.js'
+    '.bat', '.cmd', '.com', '.pif', '.scr', '.vbs', '.js'
 ]
 
 # 上传目录

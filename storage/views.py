@@ -91,26 +91,48 @@ def upload_files(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def delete_files(request):
-    """处理多文件删除的AJAX请求"""
+    """处理多文件和文件夹删除的AJAX请求"""
     try:
         data = json.loads(request.body)
         file_ids = data.get('file_ids', [])
+        folder_ids = data.get('folder_ids', [])
         
-        if not file_ids:
-            return JsonResponse({'error': '没有选择要删除的文件'}, status=400)
+        if not file_ids and not folder_ids:
+            return JsonResponse({'error': '没有选择要删除的项目'}, status=400)
         
-        deleted_count = 0
+        deleted_files_count = 0
+        deleted_folders_count = 0
+
+        # 删除文件
+        # Note: Files inside a deleted folder are handled by the Folder.delete() method.
+        # This part handles files that are selected for deletion individually.
         for file_id in file_ids:
             try:
                 file_obj = get_object_or_404(UploadedFile, pk=file_id)
                 file_obj.delete()
-                deleted_count += 1
+                deleted_files_count += 1
+            except Http404:
+                continue # File might have been deleted as part of a folder deletion
             except Exception as e:
+                # Log the error, e.g., logger.error(f"Error deleting file {file_id}: {e}")
+                continue
+        
+        # 删除文件夹及其内容
+        for folder_id in folder_ids:
+            try:
+                folder_obj = get_object_or_404(Folder, pk=folder_id)
+                # This will trigger the overridden Folder.delete() method
+                folder_obj.delete()
+                deleted_folders_count += 1
+            except Exception as e:
+                # Log the error
                 continue
         
         return JsonResponse({
             'success': True,
-            'deleted_count': deleted_count
+            'message': f'成功删除了 {deleted_files_count} 个文件和 {deleted_folders_count} 个文件夹。',
+            'deleted_files_count': deleted_files_count,
+            'deleted_folders_count': deleted_folders_count,
         })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -217,35 +239,7 @@ def move_files(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def delete_folder(request):
-    """删除文件夹"""
-    try:
-        data = json.loads(request.body)
-        folder_id = data.get('folder_id')
-        
-        if not folder_id:
-            return JsonResponse({'error': '文件夹ID不能为空'}, status=400)
-        
-        try:
-            folder = Folder.objects.get(id=folder_id)
-        except Folder.DoesNotExist:
-            return JsonResponse({'error': '文件夹不存在'}, status=400)
-        
-        # 检查文件夹是否为空
-        if folder.files.exists() or folder.subfolders.exists():
-            return JsonResponse({'error': '只能删除空文件夹'}, status=400)
-        
-        folder.delete()
-        
-        return JsonResponse({
-            'success': True,
-            'message': '文件夹删除成功'
-        })
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+
 
 def get_folder_tree(request):
     """获取文件夹树结构"""

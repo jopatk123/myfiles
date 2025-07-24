@@ -74,10 +74,14 @@ WSGI_APPLICATION = 'personal_cloud_project.wsgi.application'
 # 数据库配置
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# 将数据库放在媒体卷中以实现持久化
+DB_DIR = BASE_DIR / 'media' / 'database'
+DB_DIR.mkdir(parents=True, exist_ok=True)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DB_DIR / 'db.sqlite3',
     }
 }
 
