@@ -173,16 +173,17 @@ def validate_file_upload(file, check_total_storage=True):
     """
     from .config import MAX_UPLOAD_SIZE, ALLOWED_FILE_EXTENSIONS, FORBIDDEN_FILE_EXTENSIONS, MAX_TOTAL_STORAGE
     
-    # 检查文件大小
-    if file.size > MAX_UPLOAD_SIZE:
-        return False, f'文件大小超过限制（最大{format_file_size(MAX_UPLOAD_SIZE)}）'
-    
-    # 检查总存储空间
+    # 检查总存储空间（优先检查，如果空间不足就不需要检查单个文件大小）
     if check_total_storage:
         current_total = calculate_total_storage()
         if current_total + file.size > MAX_TOTAL_STORAGE:
             available_space = MAX_TOTAL_STORAGE - current_total
             return False, f'存储空间不足！当前已使用 {format_file_size(current_total)}，剩余空间 {format_file_size(available_space)}，需要 {format_file_size(file.size)}。请删除一些文件后再试。'
+    
+    # 只有在总存储空间足够的情况下，才检查单个文件大小限制
+    # 这样在容量充足时就不会限制单个文件大小
+    if not check_total_storage and file.size > MAX_UPLOAD_SIZE:
+        return False, f'文件大小超过限制（最大{format_file_size(MAX_UPLOAD_SIZE)}）'
     
     ext = os.path.splitext(file.name)[1].lower()
     
