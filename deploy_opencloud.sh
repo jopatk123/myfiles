@@ -31,14 +31,14 @@ check_existing_containers() {
         return 0
     fi
     
-    if [ -n "$project_containers" ] && [ "$project_containers" != "NAMES	STATUS	PORTS" ]; then
+    if [ -n "$project_containers" ] && [ "$project_containers" != "NAMES\tSTATUS\tPORTS" ]; then
         echo "⚠️  发现同名项目的容器："
         echo "$project_containers"
         EXISTING_CONTAINERS="project"
         return 0
     fi
     
-    if [ -n "$image_containers" ] && [ "$image_containers" != "NAMES	STATUS	PORTS" ]; then
+    if [ -n "$image_containers" ] && [ "$image_containers" != "NAMES\tSTATUS\tPORTS" ]; then
         echo "⚠️  发现相同镜像的容器："
         echo "$image_containers"
         EXISTING_CONTAINERS="image"
@@ -239,7 +239,7 @@ fi
 if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
     echo "❌ Docker Compose 未安装，请先安装"
     echo "💡 安装 Docker Compose："
-    echo "   sudo curl -L \"https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose"
+    echo "   sudo curl -L \"https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-\\$(uname -s)-\\$(uname -m)\" -o /usr/local/bin/docker-compose"
     echo "   sudo chmod +x /usr/local/bin/docker-compose"
     exit 1
 fi
@@ -330,7 +330,7 @@ fi
 echo "🔧 设置生产环境变量..."
 if [ ! -f ".env.prod" ]; then
     echo "🔑 生成新的 SECRET_KEY 并创建 .env.prod 文件..."
-    SECRET_KEY=$(python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
+    SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
     echo "SECRET_KEY=$SECRET_KEY" > .env.prod
     echo "DEBUG=False" >> .env.prod
     echo "✅ .env.prod 文件已创建"
@@ -340,7 +340,7 @@ fi
 
 # 验证Django配置
 echo "🧪 验证Django配置..."
-if python test_django_config.py; then
+if python3 test_django_config.py; then
     echo "✅ Django配置验证通过"
 else
     echo "❌ Django配置验证失败，请检查配置"
@@ -425,10 +425,10 @@ echo "✅ OpenCloudOS 生产环境部署完成！"
 echo "🎉 =================================="
 echo ""
 echo "📊 部署信息："
-echo "   � 项目服名称: $PROJECT_NAME"
-echo "   �️  服务器:类型: $SERVER_TYPE"
-echo "   �  服务器IP: $SERVER_IP"
-echo "   🔌 使用端口: $SELECTED_PORT"
+echo "    项目服名称: $PROJECT_NAME"
+echo "   ️  服务器:类型: $SERVER_TYPE"
+echo "     服务器IP: $SERVER_IP"
+echo "    使用端口: $SELECTED_PORT"
 echo "   ⏰ 部署时间: $(date)"
 if [ -n "$EXISTING_CONTAINERS" ]; then
     echo "   ♻️  容器处理: 已处理现有容器冲突"
@@ -462,4 +462,4 @@ else
     echo "   ✅ 应用部署在标准HTTP端口80上"
 fi
 echo ""
-echo "🚀 部署成功！享受你的应用吧！"
+echo "🚀 部署成功！享受你的应用吧!"
