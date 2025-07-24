@@ -99,7 +99,7 @@ class UploadManager {
         }
 
         // 文件类型检查
-        const forbiddenTypes = ['.exe', '.bat', '.cmd', '.com', '.pif', '.scr', '.vbs'];
+        const forbiddenTypes = ['.bat', '.cmd', '.com', '.pif', '.scr', '.vbs'];
         const ext = this.getFileExtension(file.name);
         if (forbiddenTypes.includes(ext)) {
             this.showToast(`不允许上传 ${ext} 类型的文件`, 'error');
