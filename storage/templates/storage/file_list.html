@@ -424,4 +424,59 @@
 <script src="{% static 'js/file-list.js' %}"></script>
 <script src="{% static 'js/file-manager.js' %}"></script>
 <script src="{% static 'js/folder-manager.js' %}"></script>
+
+<!-- 调试脚本 -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== 调试新建文件夹按钮 ===');
+    
+    // 等待一段时间确保所有脚本都加载完成
+    setTimeout(function() {
+        // 检查按钮是否存在
+        const createBtn = document.getElementById('create-folder-btn');
+        console.log('新建文件夹按钮:', createBtn);
+        
+        // 检查模态框是否存在
+        const modal = document.getElementById('create-folder-modal');
+        console.log('模态框元素:', modal);
+        
+        // 检查Bootstrap是否加载
+        console.log('Bootstrap可用:', typeof bootstrap !== 'undefined');
+        
+        // 检查FolderManager是否初始化
+        console.log('FolderManager实例:', window.folderManager);
+        
+        // 如果按钮存在但没有事件监听器，手动添加一个
+        if (createBtn && modal) {
+            console.log('手动添加按钮事件监听器');
+            
+            // 移除可能存在的旧事件监听器
+            const newBtn = createBtn.cloneNode(true);
+            createBtn.parentNode.replaceChild(newBtn, createBtn);
+            
+            // 添加新的事件监听器
+            newBtn.addEventListener('click', function(e) {
+                console.log('手动添加的按钮点击事件触发！');
+                e.preventDefault();
+                
+                try {
+                    if (typeof bootstrap !== 'undefined') {
+                        const modalInstance = new bootstrap.Modal(modal);
+                        modalInstance.show();
+                        console.log('模态框显示成功');
+                    } else {
+                        console.error('Bootstrap未加载');
+                        alert('Bootstrap未加载，无法显示模态框');
+                    }
+                } catch (error) {
+                    console.error('显示模态框时出错:', error);
+                    alert('显示模态框时出错: ' + error.message);
+                }
+            });
+            
+            console.log('手动事件监听器添加完成');
+        }
+    }, 2000); // 等待2秒
+});
+</script>
 {% endblock %}
